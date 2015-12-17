@@ -1,109 +1,103 @@
-﻿using System;
-using AppKit;
+﻿using Foundation;
+using System;
 using System.ComponentModel;
-using Foundation;
+using UIKit;
+using Xamarin.Forms;
 
 namespace Xamarin.Forms.Platform.Mac
 {
+  public class FormsApplicationDelegate : UIApplicationDelegate
+  {
+    private UIWindow window;
+    private Application application;
+    private bool isSuspended;
 
-	public class FormsApplicationDelegate : NSApplicationDelegate
-	{
-		private NSWindow window;
-		private Application application;
-		private bool isSuspended;
+    protected FormsApplicationDelegate()
+    {
+    }
 
-		protected FormsApplicationDelegate()
-		{
-		}
+    protected void LoadApplication(Application application)
+    {
+      if (application == null)
+        throw new ArgumentNullException("application");
+      Application.Current = application;
+      this.application = application;
+      application.add_PropertyChanged(new PropertyChangedEventHandler(this.ApplicationOnPropertyChanged));
+    }
 
-		protected void LoadApplication(Application application)
-		{
-			if (application == null)
-				throw new ArgumentNullException("application");
-			Application.Current = application;
-			this.application = application;
-			application.PropertyChanged += ApplicationOnPropertyChanged;
-		}
+    protected override void Dispose(bool disposing)
+    {
+      if (disposing && this.application != null)
+        this.application.remove_PropertyChanged(new PropertyChangedEventHandler(this.ApplicationOnPropertyChanged));
+      base.Dispose(disposing);
+    }
 
-		protected override void Dispose(bool disposing)
-		{
-			if (disposing && this.application != null)
-				this.application.PropertyChanged -= ApplicationOnPropertyChanged;
-			base.Dispose(disposing);
-		}
+    private void ApplicationOnPropertyChanged(object sender, PropertyChangedEventArgs args)
+    {
+      if (!(args.PropertyName == "MainPage"))
+        return;
+      this.UpdateMainPage();
+    }
 
-		private void ApplicationOnPropertyChanged(object sender, PropertyChangedEventArgs args)
-		{
-			if (!(args.PropertyName == "MainPage"))
-				return;
-			this.UpdateMainPage();
-		}
+    public override bool WillFinishLaunching(UIApplication uiApplication, NSDictionary launchOptions)
+    {
+      return true;
+    }
 
-		public override bool WillFinishLaunching(NSApplication application, NSDictionary launchOptions)
-		{
-			return true;
-		}
+    public override bool FinishedLaunching(UIApplication uiApplication, NSDictionary launchOptions)
+    {
+      this.window = new UIWindow(UIScreen.MainScreen.Bounds);
+      if (this.application == null)
+        throw new InvalidOperationException("You MUST invoke LoadApplication () before calling base.FinishedLaunching ()");
+      this.SetMainPage();
+      this.application.SendStart();
+      return true;
+    }
 
-		public override bool FinishedLaunching(NSApplication application, NSDictionary launchOptions)
-		{
-			//this.window = new NSWindow(NSScreen.MainScreen.Bounds);
-			this.window = new NSWindow(null,NSWindowStyle.DocModal,NSBackingStore.Retained, false);
-			if (this.application == null)
-				throw new InvalidOperationException("You MUST invoke LoadApplication () before calling base.FinishedLaunching ()");
-			this.SetMainPage();
-			//this.application.SendStart();
-			return true;
-		}
+    public override void OnActivated(UIApplication uiApplication)
+    {
+      if (this.application == null || !this.isSuspended)
+        return;
+      this.isSuspended = false;
+      this.application.SendResume();
+    }
 
-		public override void OnActivated(NSApplication application)
-		{
-			if (this.application == null || !this.isSuspended)
-				return;
-			this.isSuspended = false;
-			//this.application.SendResume();
-		}
+    public override void OnResignActivation(UIApplication uiApplication)
+    {
+      if (this.application == null)
+        return;
+      this.isSuspended = true;
+      this.application.SendSleepAsync().Wait();
+    }
 
-		public override void OnResignActivation(NSApplication application)
-		{
-			if (this.application == null)
-				return;
-			this.isSuspended = true;
-			this.application.SendSleepAsync().Wait();
-		}
+    public override void DidEnterBackground(UIApplication uiApplication)
+    {
+    }
 
-		public override void DidEnterBackground(NSApplication application)
-		{
-		}
+    public override void WillEnterForeground(UIApplication uiApplication)
+    {
+    }
 
-		public override void WillEnterForeground(NSApplication application)
-		{
-		}
+    public override void WillTerminate(UIApplication uiApplication)
+    {
+    }
 
-		public override void WillTerminate(NSApplication application)
-		{
-		}
+    private void UpdateMainPage()
+    {
+      if (this.application.MainPage == null)
+        return;
+      PlatformRenderer platformRenderer = (PlatformRenderer) this.window.RootViewController;
+      this.window.RootViewController = PageExtensions.CreateViewController(this.application.MainPage);
+      if (platformRenderer == null)
+        return;
+      ((IDisposable) platformRenderer.Platform).Dispose();
+    }
 
-		private void UpdateMainPage()
-		{
-			if (this.application.MainPage == null)
-				return;
-			PlatformRenderer platformRenderer = (PlatformRenderer) this.window.RootViewController;
-			this.window.RootViewController = PageExtensions.CreateViewController(this.application.MainPage);
-			if (platformRenderer == null)
-				return;
-			((IDisposable) platformRenderer.Platform).Dispose();
-		}
-
-		private void SetMainPage()
-		{
-			this.UpdateMainPage();
-			// ISSUE: reference to a compiler-generated method
-			this.window.MakeKeyAndVisible();
-		}
-	}
-
-
-
-
+    private void SetMainPage()
+    {
+      this.UpdateMainPage();
+      // ISSUE: reference to a compiler-generated method
+      this.window.MakeKeyAndVisible();
+    }
+  }
 }
-
