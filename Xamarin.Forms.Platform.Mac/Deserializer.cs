@@ -21,7 +21,7 @@ namespace Xamarin.Forms.Platform.Mac
         {
           using (IsolatedStorageFileStream storageFileStream = storeForApplication.OpenFile("PropertyStore.forms", System.IO.FileMode.OpenOrCreate))
           {
-            using (XmlDictionaryReader binaryReader = XmlDictionaryReader.CreateBinaryReader((Stream) storageFileStream, XmlDictionaryReaderQuotas.Max))
+            using (var binaryReader = XmlDictionaryReader.CreateBinaryReader((Stream) storageFileStream, XmlDictionaryReaderQuotas.Max))
             {
               if (storageFileStream.Length == 0L)
                 return (IDictionary<string, object>) null;
@@ -53,7 +53,7 @@ namespace Xamarin.Forms.Platform.Mac
             {
               try
               {
-                new DataContractSerializer(typeof (Dictionary<string, object>)).WriteObject(binaryWriter, (object) properties);
+                new DataContractSerializer(typeof (Dictionary<string, object>)).WriteObject(binaryWriter,  properties);
                 binaryWriter.Flush();
                 flag = true;
               }

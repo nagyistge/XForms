@@ -1,46 +1,49 @@
 using CoreGraphics;
 using System;
 using System.Drawing;
-using UIKit;
+using AppKit;
 using Xamarin.Forms;
 
 namespace Xamarin.Forms.Platform.Mac
 {
-  public class SwitchRenderer : ViewRenderer<Switch, UISwitch>
-  {
-    protected override void OnElementChanged(ElementChangedEventArgs<Switch> e)
-    {
-      if (e.OldElement != null)
-        e.OldElement.remove_Toggled(new EventHandler<ToggledEventArgs>(this.OnElementToggled));
-      if (e.NewElement != null)
-      {
-        if (this.Control == null)
-        {
-          this.SetNativeControl(new UISwitch((CGRect) RectangleF.Empty));
-          this.Control.ValueChanged += new EventHandler(this.OnControlValueChanged);
-        }
-        this.Control.On = this.Element.IsToggled;
-        e.NewElement.add_Toggled(new EventHandler<ToggledEventArgs>(this.OnElementToggled));
-      }
-      this.OnElementChanged(e);
-    }
+	public class SwitchRenderer : ViewRenderer<Switch, NSButton>
+	{
+		protected override void OnElementChanged (ElementChangedEventArgs<Switch> e)
+		{
+			if (e.OldElement != null)
+				e.OldElement.Toggled -= OnElementToggled;
+			if (e.NewElement != null)
+			{
+				if (this.Control == null)
+				{
+					this.SetNativeControl (new NSButton(RectangleF.Empty));
+					Control.SetButtonType (NSButtonType.Switch);
 
-    private void OnElementToggled(object sender, EventArgs e)
-    {
-      // ISSUE: reference to a compiler-generated method
-      this.Control.SetState(this.Element.IsToggled, true);
-    }
+					// TODO: Value changed
+					//Control.Activated += OnControlValueChanged;
+				}
+				this.Control.IntValue = Element.IsToggled ? 1 : 0;
 
-    private void OnControlValueChanged(object sender, EventArgs e)
-    {
-      this.Element.SetValueFromRenderer(Switch.IsToggledProperty, (object) (bool) (this.Control.On ? 1 : 0));
-    }
+				e.NewElement.Toggled += OnElementToggled;
+			}
+			this.OnElementChanged (e);
+		}
 
-    protected override void Dispose(bool disposing)
-    {
-      if (disposing)
-        this.Control.ValueChanged -= new EventHandler(this.OnControlValueChanged);
-      base.Dispose(disposing);
-    }
-  }
+		private void OnElementToggled (object sender, EventArgs e)
+		{
+			this.Control.State = Element.IsToggled ? NSCellStateValue.On : NSCellStateValue.Off;
+		}
+
+		private void OnControlValueChanged (object sender, EventArgs e)
+		{
+			((IElementController)Element).SetValueFromRenderer (Switch.IsToggledProperty, Control.IntValue == 0 ? false : true);
+		}
+
+		protected override void Dispose (bool disposing)
+		{
+			//if (disposing)
+			//	this.Control.ValueChanged -= new EventHandler (this.OnControlValueChanged);
+			base.Dispose (disposing);
+		}
+	}
 }

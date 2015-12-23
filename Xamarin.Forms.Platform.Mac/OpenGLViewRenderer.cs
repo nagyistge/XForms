@@ -2,7 +2,6 @@ using CoreAnimation;
 using CoreGraphics;
 using Foundation;
 using GLKit;
-using OpenGLES;
 using System;
 using System.ComponentModel;
 using Xamarin.Forms;

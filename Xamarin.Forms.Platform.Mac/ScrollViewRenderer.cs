@@ -1,249 +1,259 @@
 using CoreGraphics;
 using System;
 using System.ComponentModel;
-using UIKit;
+using AppKit;
 using Xamarin.Forms;
 
 namespace Xamarin.Forms.Platform.Mac
 {
-  public class ScrollViewRenderer : UIScrollView, IVisualElementRenderer, IDisposable, IRegisterable
-  {
-    private VisualElementPackager packager;
-    private VisualElementTracker tracker;
-    private EventTracker events;
-    private KeyboardInsetTracker insetTracker;
-    private ScrollToRequestedEventArgs requestedScroll;
-    private CGRect previousFrame;
+	public class ScrollViewRenderer : NSScrollView, IVisualElementRenderer, IDisposable, IRegisterable
+	{
+		private VisualElementPackager packager;
+		private VisualElementTracker tracker;
+		private EventTracker events;
+		//private KeyboardInsetTracker insetTracker;
+		private ScrollToRequestedEventArgs requestedScroll;
+		private CGRect previousFrame;
 
-    public VisualElement Element { get; private set; }
+		protected IScrollViewController Controller
+		{
+			get	{ return Element as IScrollViewController; }
+		}
 
-    protected IScrollViewController Controller
-    {
-      get
-      {
-        return (IScrollViewController) this.Element;
-      }
-    }
+		public VisualElement Element { get; set; }
 
-    private ScrollView scrollView
-    {
-      get
-      {
-        return this.Element as ScrollView;
-      }
-    }
+		public NSView NativeView
+		{
+			get	{ return this; }
+		}
 
-    public UIView NativeView
-    {
-      get
-      {
-        return (UIView) this;
-      }
-    }
+		private ScrollView scrollView
+		{
+			get	{ return this.Element as ScrollView; }
+		}
 
-    public UIViewController ViewController
-    {
-      get
-      {
-        return (UIViewController) null;
-      }
-    }
+		public NSViewController ViewController
+		{
+			get	{ return null; }
+		}
 
-    public event EventHandler<VisualElementChangedEventArgs> ElementChanged;
+		public ScrollViewRenderer() : base(CGRect.Empty)
+		{
+			// Not for Mac
+			//base.ScrollAnimationEnded += new EventHandler(this.HandleScrollAnimationEnded);
+			//base.Scrolled += new EventHandler(this.HandleScrolled);
+		}
 
-    public ScrollViewRenderer()
-      : base(CGRect.Empty)
-    {
-      this.ScrollAnimationEnded += new EventHandler(this.HandleScrollAnimationEnded);
-      this.Scrolled += new EventHandler(this.HandleScrolled);
-    }
+		protected override void Dispose(bool disposing)
+		{
+			if (disposing)
+			{
+				if (this.packager == null)
+					return;
 
-    private void HandleScrolled(object sender, EventArgs e)
-    {
-      this.UpdateScrollPosition();
-    }
+				this.SetElement(null);
+				this.packager.Dispose();
+				this.packager = null;
+				this.tracker.NativeControlUpdated -= new EventHandler(this.OnNativeControlUpdated);
+				this.tracker.Dispose();
+				this.tracker = null;
+				this.events.Dispose();
+				this.events = null;
 
-    private void HandleScrollAnimationEnded(object sender, EventArgs e)
-    {
-      this.Controller.SendScrollFinished();
-    }
+				//this.insetTracker.Dispose();
+				//this.insetTracker = null;
 
-    private void UpdateScrollPosition()
-    {
-      if (this.scrollView == null)
-        return;
-      this.Controller.SetScrolledPosition((double) this.ContentOffset.X, (double) this.ContentOffset.Y);
-    }
+				// Not for Mac
+				//base.ScrollAnimationEnded -= new EventHandler(this.HandleScrollAnimationEnded);
+				//base.Scrolled -= new EventHandler(this.HandleScrolled);
+			}
+			base.Dispose(disposing);
+		}
 
-    private void OnScrollToRequested(object sender, ScrollToRequestedEventArgs e)
-    {
-      if (this.Superview == null)
-      {
-        this.requestedScroll = e;
-      }
-      else
-      {
-        if (e.Mode == ScrollToMode.Position)
-        {
-          // ISSUE: reference to a compiler-generated method
-          this.SetContentOffset(new CGPoint((nfloat) e.ScrollX, (nfloat) e.ScrollY), e.ShouldAnimate);
-        }
-        else
-        {
-          Point positionForElement = this.Controller.GetScrollPositionForElement(e.Element as VisualElement, e.Position);
-          if (this.scrollView.Orientation == ScrollOrientation.Horizontal)
-          {
-            // ISSUE: reference to a compiler-generated method
-            this.SetContentOffset(new CGPoint((nfloat) positionForElement.X, this.ContentOffset.Y), e.ShouldAnimate);
-          }
-          else
-          {
-            // ISSUE: reference to a compiler-generated method
-            this.SetContentOffset(new CGPoint(this.ContentOffset.X, (nfloat) positionForElement.Y), e.ShouldAnimate);
-          }
-        }
-        if (e.ShouldAnimate)
-          return;
-        this.Controller.SendScrollFinished();
-      }
-    }
+		public SizeRequest GetDesiredSize(double widthConstraint, double heightConstraint)
+		{
+			return (NativeView as NSControl).GetSizeRequest(widthConstraint, heightConstraint, 44, 44);
+		}
 
-    public override void LayoutSubviews()
-    {
-      // ISSUE: reference to a compiler-generated method
-      base.LayoutSubviews();
-      if (this.requestedScroll != null && this.Superview != null)
-      {
-        ScrollToRequestedEventArgs e = this.requestedScroll;
-        this.requestedScroll = (ScrollToRequestedEventArgs) null;
-        this.OnScrollToRequested((object) this, e);
-      }
-      if (!(this.previousFrame != this.Frame))
-        return;
-      this.previousFrame = this.Frame;
-      KeyboardInsetTracker keyboardInsetTracker = this.insetTracker;
-      if (keyboardInsetTracker == null)
-        return;
-      keyboardInsetTracker.UpdateInsets();
-    }
+		private void HandlePropertyChanged(object sender, PropertyChangedEventArgs e)
+		{
+			if (e.PropertyName == ScrollView.ContentSizeProperty.PropertyName)
+			{
+				this.UpdateContentSize();
+				return;
+			}
+			if (e.PropertyName == VisualElement.BackgroundColorProperty.PropertyName)
+			{
+				this.UpdateBackgroundColor();
+			}
+		}
 
-    public void SetElement(VisualElement element)
-    {
-      this.requestedScroll = (ScrollToRequestedEventArgs) null;
-      VisualElement element1 = this.Element;
-      this.Element = element;
-      if (element1 != null)
-      {
-        element1.remove_PropertyChanged(new PropertyChangedEventHandler(this.HandlePropertyChanged));
-        ((IScrollViewController) element1).remove_ScrollToRequested(new EventHandler<ScrollToRequestedEventArgs>(this.OnScrollToRequested));
-      }
-      if (element == null)
-        return;
-      element.add_PropertyChanged(new PropertyChangedEventHandler(this.HandlePropertyChanged));
-      ((IScrollViewController) element).add_ScrollToRequested(new EventHandler<ScrollToRequestedEventArgs>(this.OnScrollToRequested));
-      if (this.packager == null)
-      {
-        this.DelaysContentTouches = true;
-        this.packager = new VisualElementPackager((IVisualElementRenderer) this);
-        this.packager.Load();
-        this.tracker = new VisualElementTracker((IVisualElementRenderer) this);
-        this.tracker.NativeControlUpdated += new EventHandler(this.OnNativeControlUpdated);
-        this.events = new EventTracker((IVisualElementRenderer) this);
-        this.events.LoadEvents((UIView) this);
-        this.insetTracker = new KeyboardInsetTracker((UIView) this, (Func<UIWindow>) (() => this.Window), (Action<UIEdgeInsets>) (insets => this.ContentInset = this.ScrollIndicatorInsets = insets), (Action<CGPoint>) (point =>
-        {
-          CGPoint contentOffset = this.ContentOffset;
-          // ISSUE: explicit reference operation
-          // ISSUE: variable of a reference type
-          CGPoint& local = @contentOffset;
-          // ISSUE: explicit reference operation
-          // ISSUE: explicit reference operation
-          (^local).Y = (^local).Y + point.Y;
-          // ISSUE: reference to a compiler-generated method
-          this.SetContentOffset(contentOffset, true);
-        }));
-      }
-      this.UpdateContentSize();
-      this.UpdateBackgroundColor();
-      this.OnElementChanged(new VisualElementChangedEventArgs(element1, element));
-      if (element == null)
-        return;
-      Forms.SendViewInitialized(element, (UIView) this);
-    }
+		private void HandleScrollAnimationEnded(object sender, EventArgs e)
+		{
+			this.Controller.SendScrollFinished();
+		}
 
-    private void OnNativeControlUpdated(object sender, EventArgs eventArgs)
-    {
-      this.ContentSize = this.Bounds.Size;
-      this.UpdateContentSize();
-    }
+		private void HandleScrolled(object sender, EventArgs e)
+		{
+			this.UpdateScrollPosition();
+		}
 
-    public SizeRequest GetDesiredSize(double widthConstraint, double heightConstraint)
-    {
-      return UIViewExtensions.GetSizeRequest(this.NativeView, widthConstraint, heightConstraint, 44.0, 44.0);
-    }
+		public override void Layout()
+		{
+			base.Layout();
 
-    public void SetElementSize(Size size)
-    {
-      this.Element.Layout(new Rectangle(this.Element.X, this.Element.Y, size.Width, size.Height));
-    }
+			if (this.requestedScroll != null && this.Superview != null)
+			{
+				ScrollToRequestedEventArgs scrollToRequestedEventArg = this.requestedScroll;
+				this.requestedScroll = null;
+				this.OnScrollToRequested(this, scrollToRequestedEventArg);
+			}
+			if (this.previousFrame != this.Frame)
+			{
+				this.previousFrame = this.Frame;
+				// Not for Mac
+				/*
+				KeyboardInsetTracker keyboardInsetTracker = this.insetTracker;
+				if (keyboardInsetTracker == null)
+				{
+					return;
+				}
+				keyboardInsetTracker.UpdateInsets();
+				*/
+			}
+		}
 
-    protected virtual void OnElementChanged(VisualElementChangedEventArgs e)
-    {
-      // ISSUE: reference to a compiler-generated field
-      EventHandler<VisualElementChangedEventArgs> eventHandler = this.ElementChanged;
-      if (eventHandler == null)
-        return;
-      eventHandler((object) this, e);
-    }
+		protected virtual void OnElementChanged(VisualElementChangedEventArgs e)
+		{
+			EventHandler<VisualElementChangedEventArgs> eventHandler = this.ElementChanged;
+			if (eventHandler != null)
+			{
+				eventHandler(this, e);
+			}
+		}
 
-    private void HandlePropertyChanged(object sender, PropertyChangedEventArgs e)
-    {
-      if (e.PropertyName == ScrollView.ContentSizeProperty.PropertyName)
-      {
-        this.UpdateContentSize();
-      }
-      else
-      {
-        if (!(e.PropertyName == VisualElement.BackgroundColorProperty.PropertyName))
-          return;
-        this.UpdateBackgroundColor();
-      }
-    }
+		private void OnNativeControlUpdated(object sender, EventArgs eventArgs)
+		{
+			// WT.?
+			//this.ContentSize = this.Bounds.Size;
+			this.UpdateContentSize();
+		}
 
-    private void UpdateBackgroundColor()
-    {
-      this.BackgroundColor = ColorExtensions.ToUIColor(this.Element.BackgroundColor, Color.Transparent);
-    }
+		private void OnScrollToRequested(object sender, ScrollToRequestedEventArgs e)
+		{
+			if (this.Superview == null)
+			{
+				this.requestedScroll = e;
+				return;
+			}
+			if (e.Mode != ScrollToMode.Position)
+			{
+				Point scrollPositionForElement = this.Controller.GetScrollPositionForElement(e.Element as VisualElement, e.Position);
+				if (scrollView.Orientation != ScrollOrientation.Horizontal)
+				{
+					//TODO: Scroll to Position
+					//VerticalScroller.FloatValue = e.Position;
 
-    private void UpdateContentSize()
-    {
-      CGSize cgSize = SizeExtensions.ToSizeF(((ScrollView) this.Element).ContentSize);
-      if (cgSize.IsEmpty)
-        return;
-      this.ContentSize = cgSize;
-    }
+					//SetContentOffset(new CGPoint(contentOffset.X, (nfloat)scrollPositionForElement.Y), e.ShouldAnimate);
+				}
+				else
+				{
+					// TODO: Scroll to Position
+					//HorizontalScroller.FloatValue = e.Position;
 
-    protected override void Dispose(bool disposing)
-    {
-      if (disposing)
-      {
-        if (this.packager == null)
-          return;
-        this.SetElement((VisualElement) null);
-        this.packager.Dispose();
-        this.packager = (VisualElementPackager) null;
-        this.tracker.NativeControlUpdated -= new EventHandler(this.OnNativeControlUpdated);
-        this.tracker.Dispose();
-        this.tracker = (VisualElementTracker) null;
-        this.events.Dispose();
-        this.events = (EventTracker) null;
-        this.insetTracker.Dispose();
-        this.insetTracker = (KeyboardInsetTracker) null;
-        this.ScrollAnimationEnded -= new EventHandler(this.HandleScrollAnimationEnded);
-        this.Scrolled -= new EventHandler(this.HandleScrolled);
-      }
-      // ISSUE: reference to a compiler-generated method
-      base.Dispose(disposing);
-    }
-  }
+					//nfloat x = (nfloat)scrollPositionForElement.X;
+					//SetContentOffset(new CGPoint(x, contentOffset.Y), e.ShouldAnimate);
+				}
+			}
+			else
+			{
+				VerticalScroller.FloatValue = (float)e.ScrollY;
+				HorizontalScroller.FloatValue = (float)e.ScrollX;
+				//this.SetContentOffset(new CGPoint((nfloat)e.ScrollX, (nfloat)e.ScrollY), e.ShouldAnimate);
+			}
+			if (!e.ShouldAnimate)
+			{
+				this.Controller.SendScrollFinished();
+			}
+		}
+
+		public void SetElement(VisualElement element)
+		{
+			this.requestedScroll = null;
+			VisualElement visualElement = this.Element;
+			this.Element = element;
+			if (visualElement != null)
+			{
+				visualElement.PropertyChanged -= new PropertyChangedEventHandler(this.HandlePropertyChanged);
+				((IScrollViewController)visualElement).ScrollToRequested -= new EventHandler<ScrollToRequestedEventArgs>(this.OnScrollToRequested);
+			}
+			if (element != null)
+			{
+				element.PropertyChanged += new PropertyChangedEventHandler(this.HandlePropertyChanged);
+				((IScrollViewController)element).ScrollToRequested += new EventHandler<ScrollToRequestedEventArgs>(this.OnScrollToRequested);
+				if (this.packager == null)
+				{
+					//this.DelaysContentTouches = true;
+
+					this.packager = new VisualElementPackager(this);
+					this.packager.Load();
+					this.tracker = new VisualElementTracker(this);
+					this.tracker.NativeControlUpdated += new EventHandler(this.OnNativeControlUpdated);
+					this.events = new EventTracker(this);
+					this.events.LoadEvents(this);
+
+					// TODO: WT.?
+					/*
+					this.insetTracker = new KeyboardInsetTracker(this, () => this.Window, (UIEdgeInsets insets) => {
+						UIEdgeInsets uIEdgeInset = insets;
+						UIEdgeInsets uIEdgeInset1 = uIEdgeInset;
+						this.ScrollIndicatorInsets = uIEdgeInset;
+						this.ContentInset = uIEdgeInset1;
+					}, (CGPoint point) => {
+						CGPoint contentOffset = this.ContentOffset;
+						contentOffset.Y = contentOffset.Y + point.Y;
+						this.SetContentOffset(contentOffset, true);
+					});
+					*/
+				}
+				this.UpdateContentSize();
+				this.UpdateBackgroundColor();
+				this.OnElementChanged(new VisualElementChangedEventArgs(visualElement, element));
+				if (element != null)
+				{
+					element.SendViewInitialized(this);
+				}
+			}
+		}
+
+		public void SetElementSize(Size size)
+		{
+			this.Element.Layout(new Rectangle(this.Element.X, this.Element.Y, size.Width, size.Height));
+		}
+
+		private void UpdateBackgroundColor()
+		{
+			this.BackgroundColor = this.Element.BackgroundColor.ToUIColor(Color.Transparent);
+		}
+
+		private void UpdateContentSize()
+		{
+			CGSize sizeF = ((ScrollView)this.Element).ContentSize.ToSizeF();
+			if (!sizeF.IsEmpty)
+			{
+				// TODO: Update content size
+				//this.ContentSize = sizeF;
+			}
+		}
+
+		private void UpdateScrollPosition()
+		{
+			if (this.scrollView != null)
+			{
+				Controller.SetScrolledPosition(HorizontalScroller.FloatValue, VerticalScroller.FloatValue);
+			}
+		}
+
+		public event EventHandler<VisualElementChangedEventArgs> ElementChanged;
+	}
 }

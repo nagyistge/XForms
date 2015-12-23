@@ -1,24 +1,24 @@
 using CoreGraphics;
 using System;
-using UIKit;
+using AppKit;
 
 namespace Xamarin.Forms.Platform.Mac
 {
   internal class KeyboardInsetTracker : IDisposable
   {
-    private readonly UIView targetView;
+    private readonly NSView targetView;
     private readonly Func<UIWindow> fetchWindow;
     private readonly Action<UIEdgeInsets> setInsetAction;
     private readonly Action<CGPoint> setContentOffset;
     private CGRect lastKeyboardRect;
     private bool disposed;
 
-    public KeyboardInsetTracker(UIView targetView, Func<UIWindow> fetchWindow, Action<UIEdgeInsets> setInsetAction)
+    public KeyboardInsetTracker(NSView targetView, Func<UIWindow> fetchWindow, Action<UIEdgeInsets> setInsetAction)
       : this(targetView, fetchWindow, setInsetAction, (Action<CGPoint>) null)
     {
     }
 
-    public KeyboardInsetTracker(UIView targetView, Func<UIWindow> fetchWindow, Action<UIEdgeInsets> setInsetAction, Action<CGPoint> setContentOffset)
+    public KeyboardInsetTracker(NSView targetView, Func<UIWindow> fetchWindow, Action<UIEdgeInsets> setInsetAction, Action<CGPoint> setContentOffset)
     {
       this.setContentOffset = setContentOffset;
       this.targetView = targetView;
@@ -32,19 +32,19 @@ namespace Xamarin.Forms.Platform.Mac
     {
       if (this.lastKeyboardRect.IsEmpty || this.fetchWindow() == null)
         return;
-      UIView firstResponder = UIViewExtensions.FindFirstResponder(this.targetView);
+      NSView firstResponder = UIViewExtensions.FindFirstResponder(this.targetView);
       CGRect frame = this.targetView.Frame;
       CGSize size = frame.Size;
       // ISSUE: reference to a compiler-generated method
-      CGRect cgRect = CGRect.Intersect(this.targetView.Superview.ConvertRectFromView(this.lastKeyboardRect, (UIView) null), this.targetView.Frame);
+      CGRect cgRect = CGRect.Intersect(this.targetView.Superview.ConvertRectFromView(this.lastKeyboardRect, (NSView) null), this.targetView.Frame);
       this.setInsetAction(new UIEdgeInsets((nfloat) 0, (nfloat) 0, cgRect.Height, (nfloat) 0));
       if (!(firstResponder is UITextView) || this.setContentOffset == null)
         return;
       nfloat nfloat = size.Height - cgRect.Height;
-      UIView uiView = firstResponder;
+      NSView uiView = firstResponder;
       frame = uiView.Frame;
       CGPoint location = frame.Location;
-      UIView superview = this.targetView.Superview;
+      NSView superview = this.targetView.Superview;
       // ISSUE: reference to a compiler-generated method
       nfloat y1 = uiView.ConvertPointToView(location, superview).Y;
       frame = firstResponder.Frame;

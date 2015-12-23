@@ -9,7 +9,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "XForms.Droid", "Droid\XForm
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "XForms.Mac", "XForms.Mac\XForms.Mac.csproj", "{405D6AAA-CF90-42C4-94D6-0CAF95BA6257}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Xamarin.Forms.Platform.Mac", "Xamarin.Forms.Platform.Mac\Xamarin.Forms.Platform.Mac.csproj", "{6932749D-7D70-4FA1-8188-E31675E8662F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Xamarin.Forms.Platform.WinRT", "Xamarin.Forms.Platform.Mac\Xamarin.Forms.Platform.WinRT.csproj", "{6932749D-7D70-4FA1-8188-E31675E8662F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

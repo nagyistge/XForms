@@ -1,58 +1,57 @@
 using CoreGraphics;
-using UIKit;
+using AppKit;
 using Xamarin.Forms;
 
 namespace Xamarin.Forms.Platform.Mac
 {
-  internal class ModalWrapper : UIViewController
-  {
-    private IVisualElementRenderer modal;
+	internal class ModalWrapper : NSViewController
+	{
+		private IVisualElementRenderer modal;
 
-    internal ModalWrapper(IVisualElementRenderer modal)
-    {
-      this.modal = modal;
-      this.View.BackgroundColor = UIColor.White;
-      // ISSUE: reference to a compiler-generated method
-      this.View.AddSubview(modal.ViewController.View);
-      // ISSUE: reference to a compiler-generated method
-      this.AddChildViewController(modal.ViewController);
-      // ISSUE: reference to a compiler-generated method
-      modal.ViewController.DidMoveToParentViewController((UIViewController) this);
-    }
+		internal ModalWrapper (IVisualElementRenderer modal)
+		{
+			this.modal = modal;
+			this.View.SetBackgroundColor( NSColor.White );
+			this.View.AddSubview (modal.ViewController.View);
+			this.AddChildViewController (modal.ViewController);
 
-    public override void ViewDidLayoutSubviews()
-    {
-      // ISSUE: reference to a compiler-generated method
-      base.ViewDidLayoutSubviews();
-      if (this.modal == null)
-        return;
-      IVisualElementRenderer visualElementRenderer = this.modal;
-      CGRect bounds = this.View.Bounds;
-      double width = (double) bounds.Width;
-      bounds = this.View.Bounds;
-      double height = (double) bounds.Height;
-      Size size = new Size(width, height);
-      visualElementRenderer.SetElementSize(size);
-    }
+			// TODO: WT.?
+			//modal.ViewController.DidMoveToParentViewController (this);
+		}
 
-    public override void ViewWillAppear(bool animated)
-    {
-      this.View.BackgroundColor = UIColor.White;
-      // ISSUE: reference to a compiler-generated method
-      base.ViewWillAppear(animated);
-    }
+		public override void ViewDidLayout ()
+		{
+			base.ViewDidLayout ();
 
-    protected override void Dispose(bool disposing)
-    {
-      if (disposing)
-        this.modal = (IVisualElementRenderer) null;
-      // ISSUE: reference to a compiler-generated method
-      base.Dispose(disposing);
-    }
+			if (this.modal == null)
+				return;
+			IVisualElementRenderer visualElementRenderer = this.modal;
+			CGRect bounds = this.View.Bounds;
+			double width = (double)bounds.Width;
+			bounds = this.View.Bounds;
+			double height = (double)bounds.Height;
+			Size size = new Size (width, height);
+			visualElementRenderer.SetElementSize (size);
+		}
 
-    public override UIInterfaceOrientationMask GetSupportedInterfaceOrientations()
-    {
-      return UIInterfaceOrientationMask.All;
-    }
-  }
+		public override void ViewWillAppear ()
+		{
+			this.View.SetBackgroundColor( NSColor.White );
+			base.ViewWillAppear ();
+		}
+
+		protected override void Dispose (bool disposing)
+		{
+			if (disposing)
+				this.modal = (IVisualElementRenderer)null;
+			base.Dispose (disposing);
+		}
+
+		/*
+		public override UIInterfaceOrientationMask GetSupportedInterfaceOrientations ()
+		{
+			return UIInterfaceOrientationMask.All;
+		}
+		*/
+	}
 }

@@ -1,15 +1,14 @@
-using UIKit;
+using AppKit;
 
 namespace Xamarin.Forms.Platform.Mac
 {
-  internal class HeaderWrapperView : UIView
-  {
-    public override void LayoutSubviews()
-    {
-      // ISSUE: reference to a compiler-generated method
-      base.LayoutSubviews();
-      foreach (UIView uiView in this.Subviews)
-        uiView.Frame = this.Bounds;
-    }
-  }
+	internal class HeaderWrapperView : NSView
+	{
+		public override void Layout ()
+		{
+			base.Layout ();
+			foreach (NSView uiView in this.Subviews)
+				uiView.Frame = this.Bounds;
+		}
+	}
 }

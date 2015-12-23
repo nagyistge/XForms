@@ -1,13 +1,13 @@
-using UIKit;
+using AppKit;
 
 namespace Xamarin.Forms.Platform.Mac
 {
-  internal class ChildViewController : UIViewController
-  {
-    public override void ViewDidLayoutSubviews()
-    {
-      foreach (UIViewController uiViewController in this.ChildViewControllers)
-        uiViewController.View.Frame = this.View.Bounds;
-    }
-  }
+	internal class ChildViewController : NSViewController
+	{
+		public override void ViewDidLayout ()
+		{
+			foreach (var uiViewController in this.ChildViewControllers)
+				uiViewController.View.Frame = this.View.Bounds;
+		}
+	}
 }

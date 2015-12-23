@@ -1,12 +1,14 @@
 using System.Threading;
 using System.Threading.Tasks;
-using UIKit;
+using AppKit;
 using Xamarin.Forms;
 
 namespace Xamarin.Forms.Platform.Mac
 {
   public interface IImageSourceHandler : IRegisterable
   {
-    Task<UIImage> LoadImageAsync(ImageSource imagesource, CancellationToken cancelationToken = null, float scale = 1f);
+    Task<NSImage> LoadImageAsync(
+			ImageSource imagesource, 
+			CancellationToken cancelationToken);
   }
 }

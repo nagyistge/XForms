@@ -1,18 +1,15 @@
 using CoreGraphics;
-using UIKit;
+using AppKit;
 
 namespace Xamarin.Forms.Platform.Mac
 {
-  internal class NoCaretField : UITextField
-  {
-    public NoCaretField()
-      : base(new CGRect())
-    {
-    }
+	internal class NoCaretField : NSTextView
+	{
+		public NoCaretField ()
+			: base (new CGRect ())
+		{
+			InsertionPointColor = NSColor.Clear;
+		}
 
-    public override CGRect GetCaretRectForPosition(UITextPosition position)
-    {
-      return new CGRect();
-    }
-  }
+	}
 }

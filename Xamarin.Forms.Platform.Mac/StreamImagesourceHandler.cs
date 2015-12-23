@@ -3,27 +3,26 @@ using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using UIKit;
+using AppKit;
 using Xamarin.Forms;
 
 namespace Xamarin.Forms.Platform.Mac
 {
-  public sealed class StreamImagesourceHandler : IImageSourceHandler, IRegisterable
-  {
-    public async Task<UIImage> LoadImageAsync(ImageSource imagesource, CancellationToken cancelationToken = null, float scale = 1f)
-    {
-      UIImage image = (UIImage) null;
-      StreamImageSource streamImageSource = imagesource as StreamImageSource;
-      if (streamImageSource != null && streamImageSource.get_Stream() != null)
-      {
-        Stream stream = await streamImageSource.GetStreamAsync(cancelationToken).ConfigureAwait(false);
-        if (stream != null)
-        {
-          // ISSUE: reference to a compiler-generated method
-          image = UIImage.LoadFromData(NSData.FromStream(stream), (nfloat) scale);
-        }
-      }
-      return image;
-    }
-  }
+	public sealed class StreamImagesourceHandler : IImageSourceHandler, IRegisterable
+	{
+		public async Task<NSImage> LoadImageAsync (
+			ImageSource imagesource, 
+			CancellationToken cancelationToken)
+		{
+			NSImage image = null;
+			StreamImageSource streamImageSource = imagesource as StreamImageSource;
+			if (streamImageSource != null && streamImageSource.Stream != null)
+			{
+				Stream stream = await streamImageSource.GetStreamAsync (cancelationToken).ConfigureAwait (false);
+				if (stream != null)
+					image = new NSImage (NSData.FromStream (stream));
+			}
+			return image;
+		}
+	}
 }

@@ -1,11 +1,11 @@
 using System;
-using UIKit;
+using AppKit;
 
 namespace Xamarin.Forms
 {
   public class ViewInitializedEventArgs : EventArgs
   {
-    public UIView NativeView { get; internal set; }
+    public NSView NativeView { get; internal set; }
 
     public VisualElement View { get; internal set; }
   }

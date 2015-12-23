@@ -1,5 +1,5 @@
 using System;
-using UIKit;
+using AppKit;
 using Xamarin.Forms;
 
 namespace Xamarin.Forms.Platform.Mac
@@ -8,9 +8,9 @@ namespace Xamarin.Forms.Platform.Mac
   {
     VisualElement Element { get; }
 
-    UIView NativeView { get; }
+    NSView NativeView { get; }
 
-    UIViewController ViewController { get; }
+    NSViewController ViewController { get; }
 
     event EventHandler<VisualElementChangedEventArgs> ElementChanged;
 

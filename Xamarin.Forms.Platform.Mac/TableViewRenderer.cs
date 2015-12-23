@@ -1,146 +1,155 @@
+using CoreAnimation;
 using CoreGraphics;
+using Foundation;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using UIKit;
+using System.Runtime.CompilerServices;
+using AppKit;
 using Xamarin.Forms;
 
 namespace Xamarin.Forms.Platform.Mac
 {
-  public class TableViewRenderer : ViewRenderer<TableView, UITableView>
-  {
-    private UIView originalBackgroundView;
-    private KeyboardInsetTracker insetTracker;
-    private CGRect previousFrame;
+	public class TableViewRenderer : ViewRenderer<TableView, NSTableView>
+	{
+		//private KeyboardInsetTracker insetTracker;
+		private CGRect previousFrame;
 
-    protected override void OnElementChanged(ElementChangedEventArgs<TableView> e)
-    {
-      if (e.NewElement != null)
-      {
-        UITableViewStyle style = UITableViewStyle.Plain;
-        if (e.NewElement.Intent != TableIntent.Data)
-          style = UITableViewStyle.Grouped;
-        if (this.Control == null || this.Control.Style != style)
-        {
-          if (this.Control != null)
-          {
-            this.insetTracker.Dispose();
-            this.Control.Dispose();
-          }
-          UITableView uiview = new UITableView(CGRect.Empty, style);
-          this.originalBackgroundView = uiview.BackgroundView;
-          this.SetNativeControl(uiview);
-          this.insetTracker = new KeyboardInsetTracker((UIView) uiview, (Func<UIWindow>) (() => this.Control.Window), (Action<UIEdgeInsets>) (insets => this.Control.ContentInset = this.Control.ScrollIndicatorInsets = insets), (Action<CGPoint>) (point =>
-          {
-            CGPoint contentOffset = this.Control.ContentOffset;
-            // ISSUE: explicit reference operation
-            // ISSUE: variable of a reference type
-            CGPoint& local = @contentOffset;
-            // ISSUE: explicit reference operation
-            // ISSUE: explicit reference operation
-            (^local).Y = (^local).Y + point.Y;
-            // ISSUE: reference to a compiler-generated method
-            this.Control.SetContentOffset(contentOffset, true);
-          }));
-        }
-        this.SetSource();
-        this.UpdateRowHeight();
-        this.UpdateBackgroundView();
-      }
-      this.OnElementChanged(e);
-    }
+		// Not for Mac
+		/*
+		protected override void Dispose(bool disposing)
+		{
+			if (disposing && this.insetTracker != null)
+			{
+				this.insetTracker.Dispose();
+				this.insetTracker = null;
+				Stack<NSView> uIViews = new Stack<NSView>(this.Subviews);
+				while (uIViews.Count > 0)
+				{
+					NSView uIViews1 = uIViews.Pop();
+					ViewCellRenderer.ViewTableCell viewTableCell = uIViews1 as ViewCellRenderer.ViewTableCell;
+					if (viewTableCell == null)
+					{
+						NSView[] subviews = uIViews1.Subviews;
+						for (int i = 0; i < (int)subviews.Length; i++)
+						{
+							uIViews.Push(subviews[i]);
+						}
+					}
+					else
+					{
+						//viewTableCell.Dispose();
+					}
+				}
+			}
+			base.Dispose(disposing);
+		}
+		*/
 
-    public override SizeRequest GetDesiredSize(double widthConstraint, double heightConstraint)
-    {
-      return UIViewExtensions.GetSizeRequest((UIView) this.Control, widthConstraint, heightConstraint, 44.0, 44.0);
-    }
+		public override SizeRequest GetDesiredSize(double widthConstraint, double heightConstraint)
+		{
+			return base.Control.GetSizeRequest(widthConstraint, heightConstraint, 44, 44);
+		}
 
-    public override void LayoutSubviews()
-    {
-      base.LayoutSubviews();
-      if (!(this.previousFrame != this.Frame))
-        return;
-      this.previousFrame = this.Frame;
-      KeyboardInsetTracker keyboardInsetTracker = this.insetTracker;
-      if (keyboardInsetTracker == null)
-        return;
-      keyboardInsetTracker.UpdateInsets();
-    }
+		public override void Layout()
+		{
+			base.Layout();
+			if (this.previousFrame != this.Frame)
+			{
+				this.previousFrame = this.Frame;
 
-    private void SetSource()
-    {
-      TableView element = this.Element;
-      this.Control.Source = element.HasUnevenRows ? (UITableViewSource) new UnEvenTableViewModelRenderer(element) : (UITableViewSource) new TableViewModelRenderer(element);
-    }
+				// Not for Mac
+				/*
+				KeyboardInsetTracker keyboardInsetTracker = this.insetTracker;
+				if (keyboardInsetTracker == null)
+					return;
+				keyboardInsetTracker.UpdateInsets();
+				*/
+			}
+		}
 
-    private void UpdateRowHeight()
-    {
-      int num = this.Element.RowHeight;
-      if (num <= 0)
-        num = 44;
-      this.Control.RowHeight = (nfloat) num;
-    }
+		protected override void OnElementChanged(ElementChangedEventArgs<TableView> e)
+		{
+			if (e.NewElement != null)
+			{
+				if (e.NewElement.Intent != TableIntent.Data)
+				{
+					//uITableViewStyle = UITableViewStyle.Grouped;
+				}
 
-    protected override void OnElementPropertyChanged(object sender, PropertyChangedEventArgs e)
-    {
-      base.OnElementPropertyChanged(sender, e);
-      if (e.PropertyName == "RowHeight")
-        this.UpdateRowHeight();
-      else if (e.PropertyName == "HasUnevenRows")
-      {
-        this.SetSource();
-      }
-      else
-      {
-        if (!(e.PropertyName == "BackgroundColor"))
-          return;
-        this.UpdateBackgroundView();
-      }
-    }
+				if (base.Control == null)
+				{
+					NSTableView uITableView = new NSTableView(CGRect.Empty);
 
-    private void UpdateBackgroundView()
-    {
-      this.Control.BackgroundView = this.Element.BackgroundColor == Color.Default ? this.originalBackgroundView : (UIView) null;
-    }
+					//this.originalBackgroundView = uITableView.BackgroundView;
 
-    protected override void UpdateNativeWidget()
-    {
-      if (this.Element.Opacity < 1.0)
-      {
-        if (!this.Control.Layer.ShouldRasterize)
-        {
-          this.Control.Layer.RasterizationScale = UIScreen.MainScreen.Scale;
-          this.Control.Layer.ShouldRasterize = true;
-        }
-      }
-      else
-        this.Control.Layer.ShouldRasterize = false;
-      base.UpdateNativeWidget();
-    }
+					base.SetNativeControl(uITableView);
 
-    protected override void Dispose(bool disposing)
-    {
-      if (disposing && this.insetTracker != null)
-      {
-        this.insetTracker.Dispose();
-        this.insetTracker = (KeyboardInsetTracker) null;
-        Stack<UIView> stack = new Stack<UIView>((IEnumerable<UIView>) this.Subviews);
-        while (stack.Count > 0)
-        {
-          UIView uiView1 = stack.Pop();
-          ViewCellRenderer.ViewTableCell viewTableCell = uiView1 as ViewCellRenderer.ViewTableCell;
-          if (viewTableCell != null)
-          {
-            viewTableCell.Dispose();
-          }
-          else
-          {
-            foreach (UIView uiView2 in uiView1.Subviews)
-              stack.Push(uiView2);
-          }
-        }
-      }
-      base.Dispose(disposing);
-    }
-  }
+					// TODO: WT.?
+					/*
+					this.insetTracker = new KeyboardInsetTracker(uITableView, () => base.Control.Window, (UIEdgeInsets insets) => {
+						UITableView control = base.Control;
+						UIEdgeInsets uIEdgeInset = insets;
+						UIEdgeInsets uIEdgeInset1 = uIEdgeInset;
+						base.Control.ScrollIndicatorInsets = uIEdgeInset;
+						control.ContentInset = uIEdgeInset1;
+					}, (CGPoint point) => {
+						CGPoint contentOffset = base.Control.ContentOffset;
+						contentOffset.Y = contentOffset.Y + point.Y;
+						base.Control.SetContentOffset(contentOffset, true);
+					});
+					*/
+				}
+				this.SetSource();
+				this.UpdateRowHeight();
+			}
+			base.OnElementChanged(e);
+		}
+
+		protected override void OnElementPropertyChanged(object sender, PropertyChangedEventArgs e)
+		{
+			base.OnElementPropertyChanged(sender, e);
+			if (e.PropertyName == "RowHeight")
+			{
+				this.UpdateRowHeight();
+				return;
+			}
+			if (e.PropertyName == "HasUnevenRows")
+			{
+				this.SetSource();
+				return;
+			}
+			if (e.PropertyName == "BackgroundColor")
+			{
+				this.SetBackgroundColor (Element.BackgroundColor);
+				return;
+			}
+		}
+
+		private void SetSource()
+		{
+			NSTableViewSource unEvenTableViewModelRenderer;
+			TableView element = base.Element;
+			NSTableView control = base.Control;
+			if (element.HasUnevenRows)
+			{
+				unEvenTableViewModelRenderer = new UnEvenTableViewModelRenderer(element);
+			}
+			else
+			{
+				unEvenTableViewModelRenderer = new TableViewModelRenderer(element);
+			}
+			control.Source = unEvenTableViewModelRenderer;
+		}
+
+		private void UpdateRowHeight()
+		{
+			int rowHeight = base.Element.RowHeight;
+			if (rowHeight <= 0)
+			{
+				rowHeight = 44;
+			}
+			base.Control.RowHeight = rowHeight;
+		}
+	}
 }

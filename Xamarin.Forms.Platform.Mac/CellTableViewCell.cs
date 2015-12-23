@@ -1,101 +1,111 @@
 using System;
 using System.ComponentModel;
-using UIKit;
+using AppKit;
 using Xamarin.Forms;
 
 namespace Xamarin.Forms.Platform.Mac
 {
-  public class CellTableViewCell : UITableViewCell, INativeElementView
-  {
-    private Cell cell;
-    public Action<object, PropertyChangedEventArgs> PropertyChanged;
+	/*
+	public enum UITableViewCellStyle : long
+	{
+		Default,
+		Value1,
+		Value2,
+		Subtitle,
+	}
+	*/
 
-    public Cell Cell
-    {
-      get
-      {
-        return this.cell;
-      }
-      set
-      {
-        if (this.cell == value)
-          return;
-        if (this.cell != null)
-          Device.BeginInvokeOnMainThread(new Action(this.cell.SendDisappearing));
-        this.cell = value;
-        if (this.cell == null)
-          return;
-        Device.BeginInvokeOnMainThread(new Action(this.cell.SendAppearing));
-      }
-    }
+	public class CellTableViewCell : NSTableCellView, INativeElementView
+	{
+		private Cell cell;
+		public Action<object, PropertyChangedEventArgs> PropertyChanged;
 
-    public Element Element
-    {
-      get
-      {
-        return (Element) this.Cell;
-      }
-    }
+		public Cell Cell
+		{
+			get
+			{
+				return this.cell;
+			}
+			set
+			{
+				if (this.cell == value)
+					return;
+				
+				// TODO: Call internal action
+				if (this.cell != null)
+					Device.BeginInvokeOnMainThread (new Action (this.cell.SendDisappearing));
 
-    public CellTableViewCell(UITableViewCellStyle style, string key)
-      : base(style, key)
-    {
-    }
+				this.cell = value;
+				if (this.cell == null)
+					return;
 
-    public void HandlePropertyChanged(object sender, PropertyChangedEventArgs e)
-    {
-      if (this.PropertyChanged == null)
-        return;
-      this.PropertyChanged((object) this, e);
-    }
+				// TODO: Call internal Action
+				Device.BeginInvokeOnMainThread (new Action (this.cell.SendAppearing));
+			}
+		}
 
-    internal static UITableViewCell GetNativeCell(UITableView tableView, Cell cell, bool recycleCells = false)
-    {
-      string fullName = ((object) cell).GetType().FullName;
-      CellRenderer cellRenderer = (CellRenderer) Registrar.Registered.GetHandler(((object) cell).GetType());
-      ContextActionsCell contextActionsCell = (ContextActionsCell) null;
-      UITableViewCell uiTableViewCell1;
-      if (cell.HasContextActions | recycleCells)
-      {
-        // ISSUE: reference to a compiler-generated method
-        contextActionsCell = (ContextActionsCell) tableView.DequeueReusableCell("ContextActionsCell");
-        if (contextActionsCell == null)
-        {
-          contextActionsCell = new ContextActionsCell();
-          // ISSUE: reference to a compiler-generated method
-          uiTableViewCell1 = tableView.DequeueReusableCell(fullName);
-        }
-        else
-        {
-          contextActionsCell.Close();
-          uiTableViewCell1 = contextActionsCell.ContentCell;
-          if (uiTableViewCell1.ReuseIdentifier.ToString() != fullName)
-            uiTableViewCell1 = (UITableViewCell) null;
-        }
-      }
-      else
-      {
-        // ISSUE: reference to a compiler-generated method
-        uiTableViewCell1 = tableView.DequeueReusableCell(fullName);
-      }
-      Cell cell1 = cell;
-      UITableViewCell reusableCell = uiTableViewCell1;
-      UITableView tv = tableView;
-      UITableViewCell nativeCell = cellRenderer.GetCell(cell1, reusableCell, tv);
-      UITableViewCell uiTableViewCell2 = nativeCell;
-      if (uiTableViewCell2.Layer.Hidden)
-        uiTableViewCell2.Layer.Hidden = false;
-      if (contextActionsCell != null)
-      {
-        contextActionsCell.Update(tableView, cell, nativeCell);
-        nativeCell = (UITableViewCell) contextActionsCell;
-      }
-      if (uiTableViewCell2 != null)
-      {
-        // ISSUE: reference to a compiler-generated method
-        uiTableViewCell2.LayoutSubviews();
-      }
-      return nativeCell;
-    }
-  }
+		public Element Element
+		{
+			get	{ return Cell; }
+		}
+
+		public void HandlePropertyChanged (object sender, PropertyChangedEventArgs e)
+		{
+			if (this.PropertyChanged == null)
+				return;
+			this.PropertyChanged ((object)this, e);
+		}
+
+		internal static NSTableCellView GetNativeCell (NSTableView tableView, Cell cell, bool recycleCells = false)
+		{
+			string fullName = ((object)cell).GetType ().FullName;
+
+			CellRenderer cellRenderer = (CellRenderer)Registrar.Registered.GetHandler (cell.GetType ());
+
+			ContextActionsCell contextActionsCell = (ContextActionsCell)null;
+			NSTableCellView reusableCell = null;
+			if (cell.HasContextActions | recycleCells)
+			{
+				// Not for Mac
+				//contextActionsCell = (ContextActionsCell)tableView.DequeueReusableCell ("ContextActionsCell");
+				if (contextActionsCell == null)
+				{
+					contextActionsCell = new ContextActionsCell ();
+					reusableCell = new NSTableCellView ();
+
+					//reusableCell = tableView.DequeueReusableCell (fullName);
+				}
+				/*
+				else
+				{
+					contextActionsCell.Close ();
+					reusableCell = contextActionsCell.ContentCell;
+					if (reusableCell.ReuseIdentifier.ToString () != fullName)
+						reusableCell = null;
+				}
+				*/
+			}
+			else
+			{
+				//reusableCell = tableView.DequeueReusableCell (fullName);
+				reusableCell = new NSTableCellView ();
+			}
+
+			NSTableView tv = tableView;
+			NSTableCellView nativeCell = cellRenderer.GetCell (cell, reusableCell, tv);
+
+
+			if (nativeCell.Layer.Hidden)
+				nativeCell.Layer.Hidden = false;
+			if (contextActionsCell != null)
+			{
+				contextActionsCell.Update (tableView, cell, nativeCell);
+				nativeCell = (NSTableCellView)contextActionsCell;
+			}
+			if (nativeCell != null)
+				nativeCell.Layout ();
+			
+			return nativeCell;
+		}
+	}
 }

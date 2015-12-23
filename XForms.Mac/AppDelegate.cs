@@ -22,7 +22,7 @@ namespace XForms.Mac
 
 			LoadApplication (new App ());
 
-			return base.FinishedLaunching (app, options);
+			base.DidFinishLaunching (notification);
 		}
 
 		public override void WillTerminate (NSNotification notification)

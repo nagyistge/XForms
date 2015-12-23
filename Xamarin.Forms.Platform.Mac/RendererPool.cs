@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using UIKit;
+using AppKit;
 using Xamarin.Forms;
 
 namespace Xamarin.Forms.Platform.Mac
@@ -27,13 +27,13 @@ namespace Xamarin.Forms.Platform.Mac
       if (newElement == null)
         throw new ArgumentNullException("newElement");
       bool flag = true;
-      ReadOnlyCollection<Element> logicalChildren1 = this.oldElement.get_LogicalChildren();
-      ReadOnlyCollection<Element> logicalChildren2 = newElement.get_LogicalChildren();
+      ReadOnlyCollection<Element> logicalChildren1 = this.oldElement.LogicalChildren;
+      ReadOnlyCollection<Element> logicalChildren2 = newElement.LogicalChildren;
       if (logicalChildren1.Count == logicalChildren2.Count)
       {
         for (int index = 0; index < logicalChildren1.Count; ++index)
         {
-          if (((object) logicalChildren1[index]).GetType() != ((object) logicalChildren2[index]).GetType())
+          if (( logicalChildren1[index]).GetType() != ( logicalChildren2[index]).GetType())
           {
             flag = false;
             break;
@@ -56,7 +56,7 @@ namespace Xamarin.Forms.Platform.Mac
       if (view == null)
         throw new ArgumentNullException("view");
       Stack<IVisualElementRenderer> stack;
-      if (!this.freeRenderers.TryGetValue(Registrar.Registered.GetHandlerType(((object) view).GetType()) ?? typeof (ViewRenderer), out stack) || stack.Count == 0)
+      if (!this.freeRenderers.TryGetValue(Registrar.Registered.GetHandlerType(( view).GetType()) ?? typeof (ViewRenderer), out stack) || stack.Count == 0)
         return (IVisualElementRenderer) null;
       IVisualElementRenderer visualElementRenderer = stack.Pop();
       VisualElement element = view;
@@ -66,15 +66,15 @@ namespace Xamarin.Forms.Platform.Mac
 
     private void UpdateRenderers(Element newElement)
     {
-      if (newElement.get_LogicalChildren().Count == 0)
+      if (newElement.LogicalChildren.Count == 0)
         return;
-      foreach (UIView uiView in this.parent.NativeView.Subviews)
+      foreach (NSView uiView in this.parent.NativeView.Subviews)
       {
         IVisualElementRenderer visualElementRenderer = uiView as IVisualElementRenderer;
         if (visualElementRenderer != null)
         {
           int index = (int) visualElementRenderer.NativeView.Layer.ZPosition / 1000;
-          VisualElement visualElement = newElement.get_LogicalChildren()[index] as VisualElement;
+          VisualElement visualElement = newElement.LogicalChildren[index] as VisualElement;
           if (visualElement != null)
           {
             if (visualElementRenderer.Element != null && visualElementRenderer == Platform.GetRenderer(visualElementRenderer.Element))
@@ -88,7 +88,7 @@ namespace Xamarin.Forms.Platform.Mac
 
     private void FillChildrenWithRenderers(VisualElement element)
     {
-      foreach (Element element1 in element.get_LogicalChildren())
+      foreach (Element element1 in element.LogicalChildren)
       {
         VisualElement visualElement = element1 as VisualElement;
         if (visualElement != null)
@@ -105,7 +105,7 @@ namespace Xamarin.Forms.Platform.Mac
     {
       if (renderer == null)
         return;
-      UIView[] subviews = renderer.NativeView.Subviews;
+      NSView[] subviews = renderer.NativeView.Subviews;
       for (int index = 0; index < subviews.Length; ++index)
       {
         IVisualElementRenderer renderer1 = subviews[index] as IVisualElementRenderer;

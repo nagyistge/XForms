@@ -3,274 +3,288 @@ using Foundation;
 using System;
 using System.ComponentModel;
 using System.Drawing;
-using UIKit;
+using AppKit;
 using Xamarin.Forms;
 
 namespace Xamarin.Forms.Platform.Mac
 {
-  public class WebViewRenderer : UIWebView, IVisualElementRenderer, IDisposable, IRegisterable, IWebViewRenderer
-  {
-    private VisualElementTracker tracker;
-    private VisualElementPackager packager;
-    private EventTracker events;
-    private bool ignoreSourceChanges;
-    private WebNavigationEvent lastBackForwardEvent;
+	public class WebViewRenderer : WebKit.WebView, IVisualElementRenderer, IDisposable, IRegisterable, IWebViewRenderer
+	{
+		private VisualElementTracker tracker;
+		private VisualElementPackager packager;
+		private EventTracker events;
+		private bool ignoreSourceChanges;
+		private WebNavigationEvent lastBackForwardEvent;
 
-    public VisualElement Element { get; private set; }
+		public VisualElement Element { get; set; }
 
-    public UIView NativeView
-    {
-      get
-      {
-        return (UIView) this;
-      }
-    }
+		public NSView NativeView
+		{
+			get { return this; }
+		}
 
-    public UIViewController ViewController
-    {
-      get
-      {
-        return (UIViewController) null;
-      }
-    }
+		public NSViewController ViewController
+		{
+			get	{ return null; }
+		}
 
-    public event EventHandler<VisualElementChangedEventArgs> ElementChanged;
+		public WebViewRenderer()
+		{
+			this.UIDelegate = new CustomWebViewDelegate (this);
+		}
 
-    public WebViewRenderer()
-      : base((CGRect) RectangleF.Empty)
-    {
-    }
+		/*
+		protected override void Dispose(bool disposing)
+		{
+			if (disposing)
+			{
+				if (this.IsLoading)
+				{
+					this.StopLoading();
+				}
 
-    public void SetElement(VisualElement element)
-    {
-      VisualElement element1 = this.Element;
-      this.Element = element;
-      this.Element.add_PropertyChanged(new PropertyChangedEventHandler(this.HandlePropertyChanged));
-      ((WebView) this.Element).add_EvalRequested(new EventHandler<EventArg<string>>(this.OnEvalRequested));
-      ((WebView) this.Element).add_GoBackRequested(new EventHandler(this.OnGoBackRequested));
-      ((WebView) this.Element).add_GoForwardRequested(new EventHandler(this.OnGoForwardRequested));
-      this.Delegate = (IUIWebViewDelegate) new WebViewRenderer.CustomWebViewDelegate(this);
-      this.BackgroundColor = UIColor.Clear;
-      this.AutosizesSubviews = true;
-      this.AutoresizingMask = UIViewAutoresizing.FlexibleDimensions;
-      this.tracker = new VisualElementTracker((IVisualElementRenderer) this);
-      this.packager = new VisualElementPackager((IVisualElementRenderer) this);
-      this.packager.Load();
-      this.events = new EventTracker((IVisualElementRenderer) this);
-      this.events.LoadEvents((UIView) this);
-      this.Load();
-      this.OnElementChanged(new VisualElementChangedEventArgs(element1, element));
-      if (element == null)
-        return;
-      Forms.SendViewInitialized(element, (UIView) this);
-    }
+				this.Element.PropertyChanged -= new PropertyChangedEventHandler(this.HandlePropertyChanged);
+				((WebView)this.Element).EvalRequested -= new EventHandler<EventArg<string>>(this.OnEvalRequested);
+				((WebView)this.Element).GoBackRequested -= new EventHandler(this.OnGoBackRequested);
+				((WebView)this.Element).GoForwardRequested -= new EventHandler(this.OnGoForwardRequested);
+			}
+			base.Dispose(disposing);
+		}
+		*/
 
-    private void OnGoForwardRequested(object sender, EventArgs eventArgs)
-    {
-      if (this.CanGoForward)
-      {
-        this.lastBackForwardEvent = WebNavigationEvent.Forward;
-        // ISSUE: reference to a compiler-generated method
-        this.GoForward();
-      }
-      this.UpdateCanGoBackForward();
-    }
+		public SizeRequest GetDesiredSize(double widthConstraint, double heightConstraint)
+		{
+			return (NativeView as NSControl).GetSizeRequest(widthConstraint, heightConstraint, 44, 44);
+		}
 
-    private void OnGoBackRequested(object sender, EventArgs eventArgs)
-    {
-      if (this.CanGoBack)
-      {
-        this.lastBackForwardEvent = WebNavigationEvent.Back;
-        // ISSUE: reference to a compiler-generated method
-        this.GoBack();
-      }
-      this.UpdateCanGoBackForward();
-    }
+		private void HandlePropertyChanged(object sender, PropertyChangedEventArgs e)
+		{
+			if (e.PropertyName == WebView.SourceProperty.PropertyName)
+			{
+				this.Load();
+			}
+		}
 
-    private void UpdateCanGoBackForward()
-    {
-      ((WebView) this.Element).CanGoBack = this.CanGoBack;
-      ((WebView) this.Element).CanGoForward = this.CanGoForward;
-    }
+		/*
+		public override void Layout()
+		{
+			base.Layout();
+			this.ScrollView.Frame = this.Bounds;
+		}
+		*/
 
-    private void OnEvalRequested(object sender, EventArg<string> eventArg)
-    {
-      // ISSUE: reference to a compiler-generated method
-      this.EvaluateJavascript(eventArg.Data);
-    }
+		private void Load()
+		{
+			if (this.ignoreSourceChanges)
+			{
+				return;
+			}
+			if (((WebView)this.Element).Source != null)
+			{
+				((WebView)this.Element).Source.Load(this);
+			}
+			this.UpdateCanGoBackForward();
+		}
 
-    public override void LayoutSubviews()
-    {
-      // ISSUE: reference to a compiler-generated method
-      base.LayoutSubviews();
-      this.ScrollView.Frame = this.Bounds;
-    }
+		public void LoadHtml(string html, string baseUrl)
+		{
+			if (html == null)
+				return;
 
-    public SizeRequest GetDesiredSize(double widthConstraint, double heightConstraint)
-    {
-      return UIViewExtensions.GetSizeRequest(this.NativeView, widthConstraint, heightConstraint, 44.0, 44.0);
-    }
+			base.MainFrame.LoadHtmlString (html, new NSUrl(baseUrl));
+		}
 
-    public void SetElementSize(Xamarin.Forms.Size size)
-    {
-      this.Element.Layout(new Xamarin.Forms.Rectangle(this.Element.X, this.Element.Y, size.Width, size.Height));
-    }
+		public void LoadUrl(string url)
+		{
+			base.MainFrame.LoadRequest(new NSUrlRequest(new NSUrl(url)));
+		}
 
-    protected virtual void OnElementChanged(VisualElementChangedEventArgs e)
-    {
-      // ISSUE: reference to a compiler-generated field
-      EventHandler<VisualElementChangedEventArgs> eventHandler = this.ElementChanged;
-      if (eventHandler == null)
-        return;
-      eventHandler((object) this, e);
-    }
+		protected virtual void OnElementChanged(VisualElementChangedEventArgs e)
+		{
+			EventHandler<VisualElementChangedEventArgs> eventHandler = this.ElementChanged;
+			if (eventHandler != null)
+			{
+				eventHandler(this, e);
+			}
+		}
 
-    protected override void Dispose(bool disposing)
-    {
-      if (disposing)
-      {
-        if (this.IsLoading)
-        {
-          // ISSUE: reference to a compiler-generated method
-          this.StopLoading();
-        }
-        this.Element.remove_PropertyChanged(new PropertyChangedEventHandler(this.HandlePropertyChanged));
-        ((WebView) this.Element).remove_EvalRequested(new EventHandler<EventArg<string>>(this.OnEvalRequested));
-        ((WebView) this.Element).remove_GoBackRequested(new EventHandler(this.OnGoBackRequested));
-        ((WebView) this.Element).remove_GoForwardRequested(new EventHandler(this.OnGoForwardRequested));
-      }
-      // ISSUE: reference to a compiler-generated method
-      base.Dispose(disposing);
-    }
+		private void OnEvalRequested(object sender, EventArg<string> eventArg)
+		{
+			base.StringByEvaluatingJavaScriptFromString(eventArg.Data);
+		}
 
-    private void HandlePropertyChanged(object sender, PropertyChangedEventArgs e)
-    {
-      if (!(e.PropertyName == WebView.SourceProperty.PropertyName))
-        return;
-      this.Load();
-    }
+		private void OnGoBackRequested(object sender, EventArgs eventArgs)
+		{
+			if (CanGoBack())
+			{
+				lastBackForwardEvent = WebNavigationEvent.Back;
+				GoBack();
+			}
+			this.UpdateCanGoBackForward();
+		}
 
-    private void Load()
-    {
-      if (this.ignoreSourceChanges)
-        return;
-      if (((WebView) this.Element).Source != null)
-        ((WebView) this.Element).Source.Load((IWebViewRenderer) this);
-      this.UpdateCanGoBackForward();
-    }
+		private void OnGoForwardRequested(object sender, EventArgs eventArgs)
+		{
+			if (CanGoForward())
+			{
+				lastBackForwardEvent = WebNavigationEvent.Forward;
+				GoForward();
+			}
+			this.UpdateCanGoBackForward();
+		}
 
-    public void LoadUrl(string url)
-    {
-      // ISSUE: reference to a compiler-generated method
-      this.LoadRequest(new NSUrlRequest(new NSUrl(url)));
-    }
+		public void SetElement(VisualElement element)
+		{
+			VisualElement visualElement = this.Element;
+			this.Element = element;
+			this.Element.PropertyChanged += new PropertyChangedEventHandler(this.HandlePropertyChanged);
+			((WebView)this.Element).EvalRequested += new EventHandler<EventArg<string>>(this.OnEvalRequested);
+			((WebView)this.Element).GoBackRequested += new EventHandler(this.OnGoBackRequested);
+			((WebView)this.Element).GoForwardRequested += new EventHandler(this.OnGoForwardRequested);
 
-    public void LoadHtml(string html, string baseUrl)
-    {
-      if (html == null)
-        return;
-      // ISSUE: reference to a compiler-generated method
-      this.LoadHtmlString(html, baseUrl == null ? new NSUrl(NSBundle.MainBundle.BundlePath, true) : new NSUrl(baseUrl, true));
-    }
+			base.UIDelegate = new WebViewRenderer.CustomWebViewDelegate(this);
 
-    private class CustomWebViewDelegate : UIWebViewDelegate
-    {
-      private readonly WebViewRenderer renderer;
-      private WebNavigationEvent lastEvent;
+			this.SetBackgroundColor ( NSColor.Clear );
+			this.AutoresizesSubviews = true;
+			// TODO: I dunno?
+			//this.AutoresizingMask = NSViewResizingMask. = UIViewAutoresizing.FlexibleDimensions;
+			this.tracker = new VisualElementTracker(this);
+			this.packager = new VisualElementPackager(this);
+			this.packager.Load();
+			this.events = new EventTracker(this);
+			this.events.LoadEvents(this);
+			this.Load();
+			this.OnElementChanged(new VisualElementChangedEventArgs(visualElement, element));
+			if (element != null)
+			{
+				element.SendViewInitialized(this);
+			}
+		}
 
-      private WebView WebView
-      {
-        get
-        {
-          return (WebView) this.renderer.Element;
-        }
-      }
+		public void SetElementSize(Size size)
+		{
+			this.Element.Layout(new Rectangle(this.Element.X, this.Element.Y, size.Width, size.Height));
+		}
 
-      public CustomWebViewDelegate(WebViewRenderer renderer)
-      {
-        if (renderer == null)
-          throw new ArgumentNullException("renderer");
-        this.renderer = renderer;
-      }
+		private void UpdateCanGoBackForward()
+		{
+			((WebView)this.Element).CanGoBack = base.CanGoBack();
+			((WebView)this.Element).CanGoForward = this.CanGoForward();
+		}
 
-      private string GetCurrentUrl()
-      {
-        return this.renderer.Request.Url.AbsoluteUrl.ToString();
-      }
+		public event EventHandler<VisualElementChangedEventArgs> ElementChanged;
 
-      public override void LoadStarted(UIWebView webView)
-      {
-      }
+		private class CustomWebViewDelegate : WebKit.WebUIDelegate
+		{
+			private readonly WebViewRenderer renderer;
+			private WebNavigationEvent lastEvent;
 
-      public override void LoadingFinished(UIWebView webView)
-      {
-        if (webView.IsLoading)
-          return;
-        this.renderer.ignoreSourceChanges = true;
-        string currentUrl = this.GetCurrentUrl();
-        this.WebView.SetValueFromRenderer(WebView.SourceProperty, (object) new UrlWebViewSource()
-        {
-          Url = currentUrl
-        });
-        this.renderer.ignoreSourceChanges = false;
-        this.WebView.SendNavigated(new WebNavigatedEventArgs(this.lastEvent, this.WebView.Source, currentUrl, WebNavigationResult.Success));
-        this.renderer.UpdateCanGoBackForward();
-      }
+			private WebView WebView
+			{
+				get	{ return (WebView)this.renderer.Element; }
+			}
 
-      public override bool ShouldStartLoad(UIWebView webView, NSUrlRequest request, UIWebViewNavigationType navigationType)
-      {
-        WebNavigationEvent webNavigationEvent = WebNavigationEvent.NewPage;
-        long num1 = (long) navigationType;
-        long num2 = 5;
-        if ((ulong) num1 <= (ulong) num2)
-        {
-          switch ((uint) num1)
-          {
-            case 0:
-              webNavigationEvent = WebNavigationEvent.NewPage;
-              break;
-            case 1:
-              webNavigationEvent = WebNavigationEvent.NewPage;
-              break;
-            case 2:
-              webNavigationEvent = this.renderer.lastBackForwardEvent;
-              break;
-            case 3:
-              webNavigationEvent = WebNavigationEvent.Refresh;
-              break;
-            case 4:
-              webNavigationEvent = WebNavigationEvent.NewPage;
-              break;
-            case 5:
-              webNavigationEvent = WebNavigationEvent.NewPage;
-              break;
-          }
-        }
-        this.lastEvent = webNavigationEvent;
-        string str = request.Url.ToString();
-        int num3 = (int) webNavigationEvent;
-        UrlWebViewSource urlWebViewSource = new UrlWebViewSource();
-        urlWebViewSource.Url = str;
-        string url = str;
-        WebNavigatingEventArgs args = new WebNavigatingEventArgs((WebNavigationEvent) num3, (WebViewSource) urlWebViewSource, url);
-        this.WebView.SendNavigating(args);
-        this.renderer.UpdateCanGoBackForward();
-        return !args.Cancel;
-      }
+			public CustomWebViewDelegate(WebViewRenderer renderer)
+			{
+				if (renderer == null)
+					throw new ArgumentNullException("renderer");
 
-      public override void LoadFailed(UIWebView webView, NSError error)
-      {
-        string currentUrl = this.GetCurrentUrl();
-        WebView webView1 = this.WebView;
-        int num1 = (int) this.lastEvent;
-        UrlWebViewSource urlWebViewSource = new UrlWebViewSource();
-        urlWebViewSource.Url = currentUrl;
-        string url = currentUrl;
-        int num2 = 4;
-        WebNavigatedEventArgs args = new WebNavigatedEventArgs((WebNavigationEvent) num1, (WebViewSource) urlWebViewSource, url, (WebNavigationResult) num2);
-        webView1.SendNavigated(args);
-        this.renderer.UpdateCanGoBackForward();
-      }
-    }
-  }
+				this.renderer = renderer;
+
+				renderer.FailedLoadWithError += (sender, e) => Fail();
+				renderer.OnFailedLoading += (sender, e) => Fail();
+				renderer.FinishedLoad += (sender, e) => Finished();
+				renderer.OnFinishedLoading += (sender, e) => Finished();
+			}
+
+			private void Fail()
+			{
+				string currentUrl = this.GetCurrentUrl();
+				this.WebView.SendNavigated(new WebNavigatedEventArgs(this.lastEvent, new UrlWebViewSource()
+				{
+					Url = currentUrl
+				}, currentUrl, WebNavigationResult.Failure));
+				this.renderer.UpdateCanGoBackForward();
+			}
+
+			private void Finished()
+			{
+				if (renderer.IsLoading)
+					return;
+
+				this.renderer.ignoreSourceChanges = true;
+				string currentUrl = this.GetCurrentUrl();
+				((IElementController)this.WebView).SetValueFromRenderer(WebView.SourceProperty, new UrlWebViewSource()
+				{
+					Url = currentUrl
+				});
+				this.renderer.ignoreSourceChanges = false;
+				WebNavigatedEventArgs webNavigatedEventArg = new WebNavigatedEventArgs(this.lastEvent, this.WebView.Source, currentUrl, WebNavigationResult.Success);
+				this.WebView.SendNavigated(webNavigatedEventArg);
+				this.renderer.UpdateCanGoBackForward();
+			}
+
+
+			private string GetCurrentUrl()
+			{
+				return renderer.MainFrameUrl;
+			}
+
+			/*
+			public override bool ShouldStartLoad(UIWebView webView, NSUrlRequest request, UIWebViewNavigationType navigationType)
+			{
+				WebNavigationEvent webNavigationEvent = WebNavigationEvent.NewPage;
+				UIWebViewNavigationType uIWebViewNavigationType = navigationType;
+				if (uIWebViewNavigationType <= UIWebViewNavigationType.Other)
+				{
+					switch ((uint)uIWebViewNavigationType)
+					{
+					case 0:
+						{
+							webNavigationEvent = WebNavigationEvent.NewPage;
+							break;
+						}
+					case 1:
+						{
+							webNavigationEvent = WebNavigationEvent.NewPage;
+							break;
+						}
+					case 2:
+						{
+							webNavigationEvent = this.renderer.lastBackForwardEvent;
+							break;
+						}
+					case 3:
+						{
+							webNavigationEvent = WebNavigationEvent.Refresh;
+							break;
+						}
+					case 4:
+						{
+							webNavigationEvent = WebNavigationEvent.NewPage;
+							break;
+						}
+					case 5:
+						{
+							webNavigationEvent = WebNavigationEvent.NewPage;
+							break;
+						}
+					}
+				}
+				else
+				{
+				}
+				this.lastEvent = webNavigationEvent;
+				string str = request.Url.ToString();
+				WebNavigatingEventArgs webNavigatingEventArg = new WebNavigatingEventArgs(webNavigationEvent, new UrlWebViewSource()
+				{
+					Url = str
+				}, str);
+				this.WebView.SendNavigating(webNavigatingEventArg);
+				this.renderer.UpdateCanGoBackForward();
+				return !webNavigatingEventArg.Cancel;
+			}
+			*/
+		}
+	}
 }
